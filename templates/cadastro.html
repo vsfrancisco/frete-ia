@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Transportadora - Frete IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }</style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="bg-indigo-600 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2 hover:opacity-80 transition">
+                <span class="text-2xl text-white">🚚</span>
+                <h1 class="text-xl font-bold text-white tracking-wide">Frete IA <span class="text-indigo-200 text-sm font-normal">Pro</span></h1>
+            </a>
+            <a href="/" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400">
+                &larr; Voltar ao Início
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex items-center justify-center px-4 py-8">
+        <div class="w-full max-w-md bg-white rounded-xl shadow-md border border-gray-100 p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Nova Transportadora</h2>
+            <p class="text-sm text-gray-500 mb-6 text-center">Cadastre os dados base para a frota</p>
+            
+            <form id="form-cadastro" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Empresa</label>
+                    <input type="text" id="nome" required placeholder="Ex: TransLogística Ltda" class="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Margem de Lucro Desejada (%)</label>
+                    <input type="number" id="margem" step="0.1" required placeholder="Ex: 15.5" class="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <p class="text-xs text-gray-400 mt-1">Margem ideal que será ajustada pela IA depois.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Custo de Manutenção (R$ / km)</label>
+                    <input type="number" id="custo" step="0.01" required placeholder="Ex: 0.45" class="w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <p class="text-xs text-gray-400 mt-1">Custo de pneu, óleo, pedágio por km rodado.</p>
+                </div>
+
+                <button type="submit" id="btn-salvar" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-md shadow transition">
+                    Salvar Transportadora
+                </button>
+            </form>
+
+            <!-- Mensagem de Sucesso -->
+            <div id="msg-sucesso" class="hidden mt-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm text-center font-medium">
+                Transportadora cadastrada com sucesso!
+            </div>
+        </div>
+    </main>
+
+        <script>
+        document.getElementById('form-cadastro').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-salvar');
+            btn.disabled = true;
+            btn.innerText = "Salvando...";
+
+            // Garantindo que enviaremos exatamente o que o schema do FastAPI pede
+            const dados = {
+                nome: document.getElementById('nome').value,
+                margem_percentual: parseFloat(document.getElementById('margem').value),
+                custo_manutencao_por_km: parseFloat(document.getElementById('custo').value),
+                consumo_km_l: 2.5,
+                custo_fixo_mensal: 5000.0
+            };
+
+            try {
+                // Removemos a barra no final (/transportadoras) pois o FastAPI as vezes redireciona e perde o POST
+                const res = await fetch('/transportadoras/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    // Pega o erro exato do Pydantic para mostrar na tela
+                    console.error("Erro da API:", errorData);
+                    const msgErro = errorData.detail 
+                        ? (typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail))
+                        : "Erro desconhecido";
+                    
+                    alert("Atenção, o servidor recusou os dados:\n" + msgErro);
+                    throw new Error("Erro de validação (422)");
+                }
+
+                document.getElementById('msg-sucesso').classList.remove('hidden');
+                document.getElementById('form-cadastro').reset();
+                
+                // Esconde a mensagem depois de 3 segundos
+                setTimeout(() => {
+                    document.getElementById('msg-sucesso').classList.add('hidden');
+                }, 3000);
+
+            } catch (error) {
+                console.error(error);
+                // Não chama o alert genérico se já mostramos o alert específico acima
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Salvar Transportadora";
+            }
+        };
+    </script>
+</body>
+</html>

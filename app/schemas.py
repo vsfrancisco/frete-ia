@@ -4,13 +4,15 @@ from typing import Optional
 # Transportadora
 class TransportadoraBase(BaseModel):
     nome: str
-    consumo_km_l: float
+    consumo_km_l: Optional[float] = None
     margem_percentual: float
     custo_manutencao_por_km: float = 0.15
-    custo_fixo_mensal: float = 5000.0
+    custo_fixo_mensal: Optional[float] = 5000.0 
 
-class TransportadoraCreate(TransportadoraBase):
-    pass
+class TransportadoraCreate(BaseModel):
+    nome: str
+    margem_percentual: float
+    custo_manutencao_por_km: float
 
 class Transportadora(TransportadoraBase):
     id: int
