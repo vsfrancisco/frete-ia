@@ -58,7 +58,7 @@ def criar_veiculo(dados: VeiculoCreate, db: Session = Depends(get_db)):
 def listar_veiculos_transp(transportadora_id: int, db: Session = Depends(get_db)):
     return crud.listar_veiculos_por_transportadora(db, transportadora_id)
 
-# Adicione esta rota no app/main.py (logo abaixo da rota principal '/')
+
 @app.get("/cadastro-transportadora")
 def tela_cadastro(request: Request):
     return templates.TemplateResponse("cadastro.html", {"request": request})
@@ -69,6 +69,21 @@ def criar_transportadora_endpoint(
     db: Session = Depends(get_db)
 ):
     return crud.criar_transportadora(db=db, dados=dados)
+
+# Rota para abrir a tela HTML de veículos
+@app.get("/cadastro-veiculo")
+def tela_cadastro_veiculo(request: Request):
+    return templates.TemplateResponse("cadastro_veiculo.html", {"request": request})
+
+# Rota para salvar o veículo no banco de dados
+@app.post("/veiculos/")
+def criar_veiculo_endpoint(
+    dados: VeiculoCreate = Body(...), 
+    db: Session = Depends(get_db)
+):
+    # Chamando exatamente com 'dados=dados' como está no seu crud.py!
+    return crud.criar_veiculo(db=db, dados=dados)
+
 
 
 
