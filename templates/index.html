@@ -136,6 +136,14 @@
                             <p id="res-ia-prob" class="text-2xl font-bold text-green-300">0%</p>
                         </div>
                     </div>
+                                    <!-- Botão de Download do PDF -->
+                <div class="flex gap-3 justify-center">
+                    <button id="btn-pdf" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow transition flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2m0 0v-8m0 8H3m6-6h12"></path></svg>
+                        Baixar Relatório em PDF
+                    </button>
+                </div>
+
                 </div>
 
                 <!-- Grid de Custos -->
@@ -170,6 +178,8 @@
         const formatarMoeda = (valor) => {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
         };
+
+        let ultimosDadosFrete = {};
 
         const selectTransp = document.getElementById('transportadora_id');
         const selectVeiculo = document.getElementById('veiculo_id');
@@ -286,6 +296,7 @@
                 // Trocar telas
                 painelVazio.style.display = 'none';
                 painelResultados.style.display = 'block';
+                ultimosDadosFrete = result;
 
             } catch (error) {
                 console.error(error);
@@ -294,6 +305,39 @@
                 btnCalcular.disabled = false;
                 btnCalcular.classList.remove('opacity-80', 'cursor-not-allowed');
                 spinner.classList.add('hidden');
+            }
+        };
+        // Após preencher os resultados, guarde os dados para o PDF
+        document.getElementById('btn-pdf').onclick = async () => {
+            // Preparar os dados para mandar pro backend gerar o PDF
+            const dadosParaPdf = {
+                ...ultimosDadosFrete,
+                transportadora_nome: document.querySelector('#transportadora_id option:checked').text,
+                veiculo_nome: document.querySelector('#veiculo_id option:checked').text
+            };
+
+            try {
+                const res = await fetch('/gerar-pdf/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosParaPdf)
+                });
+
+                if (!res.ok) throw new Error("Erro ao gerar PDF");
+
+                // Converter a resposta em um Blob e fazer download
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cotacao_frete_${new Date().getTime()}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+            } catch (error) {
+                alert("Erro ao gerar PDF: " + error.message);
             }
         };
     </script>

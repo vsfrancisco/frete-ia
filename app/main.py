@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Depends, Request, Body
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from app.services.gerar_pdf import gerar_relatorio_frete
 
 from .database import Base, engine, SessionLocal
 from . import models, crud
@@ -83,6 +84,35 @@ def criar_veiculo_endpoint(
 ):
     # Chamando exatamente com 'dados=dados' como está no seu crud.py!
     return crud.criar_veiculo(db=db, dados=dados)
+
+@app.post("/gerar-pdf/")
+def gerar_pdf(dados: dict):
+    try:
+        # Gera o buffer em memória usando o nosso serviço
+        pdf_buffer = gerar_relatorio_frete(
+            dados_frete=dados,
+            transportadora_nome=dados.get("transportadora_nome", "N/A"),
+            veiculo_nome=dados.get("veiculo_nome", "N/A")
+        )
+        
+        # Pega os bytes do buffer
+        pdf_bytes = pdf_buffer.getvalue()
+        
+        # Fecha o buffer para não consumir memória
+        pdf_buffer.close()
+        
+        # Retorna o arquivo binário com os cabeçalhos corretos de PDF
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": "attachment; filename=cotacao_frete.pdf"
+            }
+        )
+    except Exception as e:
+        # Se der erro no Python, imprime no console para a gente saber
+        print(f"Erro ao gerar PDF: {e}")
+        return {"erro": str(e)}
 
 
 
