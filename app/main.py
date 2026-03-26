@@ -114,6 +114,28 @@ def gerar_pdf(dados: dict):
         print(f"Erro ao gerar PDF: {e}")
         return {"erro": str(e)}
 
+# 1. Rota para a tela HTML do Histórico
+@app.get("/historico")
+def tela_historico(request: Request):
+    return templates.TemplateResponse("historico.html", {"request": request})
+
+# 2. Rota que puxa as últimas simulações do banco
+@app.get("/api/simulacoes")
+def listar_simulacoes(db: Session = Depends(get_db)):
+    return db.query(models.SimulacaoFrete).order_by(models.SimulacaoFrete.id.desc()).limit(50).all()
+
+# 3. Rota para dar "Baixa" no frete (marcar como Fechado)
+@app.post("/api/simulacoes/{simulacao_id}/fechar")
+def fechar_frete(simulacao_id: int, db: Session = Depends(get_db)):
+    simulacao = db.query(models.SimulacaoFrete).filter(models.SimulacaoFrete.id == simulacao_id).first()
+    if simulacao:
+        simulacao.frete_fechado = True
+        db.commit()
+        return {"msg": "Frete fechado com sucesso!"}
+    return {"erro": "Não encontrado"}
+
+from sqlalchemy import text
+
 
 
 

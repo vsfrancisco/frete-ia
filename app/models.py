@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from datetime import datetime
 from .database import Base
 
@@ -34,6 +34,8 @@ class SimulacaoFrete(Base):
     margem_ia = Column(Float, nullable=True)
     preco_ia = Column(Float, nullable=True)
     probabilidade_fechamento = Column(String, nullable=True)
+    cliente_nome = Column(String(150), nullable=True)
+    frete_fechado = Column(Boolean, default=False)
 
 
 class Transportadora(Base):

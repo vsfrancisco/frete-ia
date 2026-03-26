@@ -23,8 +23,8 @@
                 <span class="text-2xl text-white">🚚</span>
                 <h1 class="text-xl font-bold text-white tracking-wide">Frete IA <span class="text-indigo-200 text-sm font-normal">Pro</span></h1>
             </div>
-            
-            <!-- NOVO BOTÃO AQUI -->
+
+
             <a href="/cadastro-transportadora" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400 shadow-sm flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 Nova Transportadora
@@ -32,6 +32,11 @@
             <a href="/cadastro-veiculo" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400 shadow-sm flex items-center gap-2">
                     + Veículo
                 </a>
+            
+                <a href="/historico" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400 shadow-sm flex items-center gap-2">
+                    📋 Histórico
+                </a>
+
         </div>
         
     </header>
@@ -60,6 +65,12 @@
                             <option value="">Selecione a transportadora</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- Campo de Cliente (Novo) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cliente / Embarcador <span class="text-xs text-gray-400 font-normal">Opcional</span></label>
+                    <input type="text" id="cliente_nome" placeholder="Ex: Ambev, Mercado Livre..." class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm transition">
                 </div>
 
                 <!-- Endereços -->
@@ -254,6 +265,7 @@
             const dados = {
                 transportadora_id: parseInt(selectTransp.value),
                 veiculo_id: parseInt(selectVeiculo.value),
+                cliente_nome: document.getElementById('cliente_nome').value || null,
                 origem: document.getElementById('origem').value,
                 destino: document.getElementById('destino').value,
                 peso_kg: parseFloat(document.getElementById('peso_kg').value),

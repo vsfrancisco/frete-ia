@@ -43,6 +43,7 @@ class SimulacaoCreate(BaseModel):
     distancia_km: Optional[float] = None
     peso_kg: float
     tipo_carga: str = "lotacao"
+    cliente_nome: Optional[str] = None
 
 class SimulacaoFrete(BaseModel):
     id: int
@@ -62,6 +63,11 @@ class SimulacaoFrete(BaseModel):
     margem_ia: Optional[float] = None
     preco_ia: Optional[float] = None
     probabilidade_fechamento: Optional[str] = None
+    cliente_nome: Optional[str] = None
+    frete_fechado: bool = False
+    
+    class Config:
+        from_attributes = True
 
 # ANTT
 class TabelaAnttBase(BaseModel):
