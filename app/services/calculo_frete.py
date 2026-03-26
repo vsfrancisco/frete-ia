@@ -18,8 +18,13 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     if "/" in dados.origem:
         uf_origem = dados.origem.split("/")[-1].strip().upper()
 
-    diesel_db = db.query(PrecoDiesel).filter(PrecoDiesel.uf == uf_origem).first()
-    preco_litro_diesel = diesel_db.preco_medio if diesel_db else 6.50
+        # Se o usuário digitou o diesel na tela, usa ele. Senão, busca do banco.
+    if hasattr(dados, 'preco_diesel') and dados.preco_diesel and dados.preco_diesel > 0:
+        preco_litro_diesel = dados.preco_diesel
+    else:
+        diesel_db = db.query(PrecoDiesel).filter(PrecoDiesel.uf == uf_origem).first()
+        preco_litro_diesel = diesel_db.preco_medio if diesel_db else 6.50
+
     
     # 1. CUSTOS DA VIAGEM COMPLETA (CAMINHÃO CHEIO)
     if veiculo.consumo_km_l and veiculo.consumo_km_l > 0:

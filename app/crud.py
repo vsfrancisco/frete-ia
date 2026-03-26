@@ -30,8 +30,7 @@ def criar_simulacao(db: Session, dados: schemas.SimulacaoCreate):
     
     calculo = calcular_frete_completo(dados, db)
     
-    # Removemos o tipo_carga do dicionário para não quebrar o banco atual
-    dados_dict = dados.model_dump(exclude={"tipo_carga"})
+    dados_dict = dados.model_dump(exclude={"tipo_carga", "preco_diesel"})
     
     db_obj = models.SimulacaoFrete(
         **dados_dict,
