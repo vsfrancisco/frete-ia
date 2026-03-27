@@ -25,6 +25,32 @@
     <main class="flex-grow max-w-7xl mx-auto w-full px-4 py-8">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold text-gray-800">Histórico de Cotações (CRM)</h2>
+                    <!-- Cards de Métricas (Dashboard) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Negócios Fechados</p>
+                    <p id="metrica-qtd" class="text-3xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="p-3 bg-indigo-50 rounded-full text-indigo-600 text-2xl">📦</div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Faturamento Estimado</p>
+                    <p id="metrica-fat" class="text-2xl font-bold text-green-600">R$ 0,00</p>
+                </div>
+                <div class="p-3 bg-green-50 rounded-full text-green-600 text-2xl">💰</div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 mb-1">Lucro Bruto (Aprox.)</p>
+                    <p id="metrica-lucro" class="text-2xl font-bold text-blue-600">R$ 0,00</p>
+                </div>
+                <div class="p-3 bg-blue-50 rounded-full text-blue-600 text-2xl">📈</div>
+            </div>
+        </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -113,6 +139,22 @@
                 alert("Erro ao fechar frete");
             }
         }
+
+                async function carregarMetricas() {
+            try {
+                const res = await fetch('/api/metricas');
+                const met = await res.json();
+                
+                document.getElementById('metrica-qtd').innerText = met.total_fechados;
+                document.getElementById('metrica-fat').innerText = formatarMoeda(met.faturamento);
+                document.getElementById('metrica-lucro').innerText = formatarMoeda(met.lucro_estimado);
+            } catch (e) {
+                console.error("Erro nas métricas:", e);
+            }
+        }
+        
+        // Chamamos a função junto com a inicialização
+        carregarMetricas();
 
         // Iniciar
         carregarHistorico();

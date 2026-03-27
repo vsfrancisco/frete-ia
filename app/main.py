@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.services.gerar_pdf import gerar_relatorio_frete
+from sqlalchemy import func
 
 from .database import Base, engine, SessionLocal
 from . import models, crud
@@ -135,5 +136,28 @@ def fechar_frete(simulacao_id: int, db: Session = Depends(get_db)):
     return {"erro": "Não encontrado"}
 
 from sqlalchemy import text
+
+@app.get("/api/metricas")
+def obter_metricas(db: Session = Depends(get_db)):
+    # 1. Total de fretes com status "Fechado"
+    total_fechados = db.query(models.SimulacaoFrete).filter(
+        models.SimulacaoFrete.frete_fechado == True
+    ).count()
+
+    # 2. Soma do faturamento (preço vendido) e dos custos desses fretes fechados
+    somas = db.query(
+        func.sum(models.SimulacaoFrete.preco_ia).label("faturamento"),
+        func.sum(models.SimulacaoFrete.custo_total).label("custo")
+    ).filter(models.SimulacaoFrete.frete_fechado == True).first()
+
+    faturamento = somas.faturamento or 0.0
+    custo = somas.custo or 0.0
+    lucro = faturamento - custo
+
+    return {
+        "total_fechados": total_fechados,
+        "faturamento": faturamento,
+        "lucro_estimado": lucro
+    }
 
 
