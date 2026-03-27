@@ -37,6 +37,7 @@ def criar_simulacao(db: Session, dados: schemas.SimulacaoCreate):
         # Adicionados os campos que estavam faltando!
         custo_diesel=calculo.get("custo_diesel"),
         custo_manutencao=calculo.get("custo_manutencao"),
+        custo_pedagio=calculo.get("custo_pedagio"),
         custo_total=calculo.get("custo_total"),
         piso_anttt=calculo.get("piso_anttt"),
         preco_custo_margem=calculo.get("preco_custo_margem"),

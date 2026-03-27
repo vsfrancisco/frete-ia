@@ -137,5 +137,3 @@ def fechar_frete(simulacao_id: int, db: Session = Depends(get_db)):
 from sqlalchemy import text
 
 
-
-

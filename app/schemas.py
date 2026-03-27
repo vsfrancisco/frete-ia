@@ -55,6 +55,7 @@ class SimulacaoFrete(BaseModel):
     peso_kg: float
     custo_diesel: float
     custo_manutencao: float
+    custo_pedagio: float = 0.0
     custo_total: float
     piso_anttt: Optional[float]
     preco_custo_margem: Optional[float]

@@ -18,6 +18,16 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     if "/" in dados.origem:
         uf_origem = dados.origem.split("/")[-1].strip().upper()
 
+        tarifa_pedagio_por_km_eixo = 0.05  # Padrão Brasil (Norte/Nordeste/Centro-Oeste)
+    if uf_origem == "SP":
+        tarifa_pedagio_por_km_eixo = 0.15  # SP tem mais praças e é mais caro
+    elif uf_origem in ["RJ", "PR", "SC", "RS", "MG"]:
+        tarifa_pedagio_por_km_eixo = 0.10
+    
+    # Se por algum motivo o veículo estiver sem eixo cadastrado, assumimos mínimo de 2 eixos
+    eixos_cobrados = veiculo.eixos if veiculo.eixos and veiculo.eixos > 0 else 2
+    custo_pedagio = dados.distancia_km * tarifa_pedagio_por_km_eixo * eixos_cobrados
+
         # Se o usuário digitou o diesel na tela, usa ele. Senão, busca do banco.
     if hasattr(dados, 'preco_diesel') and dados.preco_diesel and dados.preco_diesel > 0:
         preco_litro_diesel = dados.preco_diesel
@@ -33,7 +43,7 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
         custo_diesel_full = (dados.distancia_km / 2.5) * preco_litro_diesel
         
     custo_manutencao_full = dados.distancia_km * transportadora.custo_manutencao_por_km
-    custo_total_full = custo_diesel_full + custo_manutencao_full
+    custo_total_full = custo_diesel_full + custo_manutencao_full + custo_pedagio
     
     # 2. PISO ANTT (CAMINHÃO CHEIO)
     piso_row = db.query(TabelaAntt).filter(
@@ -80,6 +90,7 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     return {
         "custo_diesel": custo_diesel,
         "custo_manutencao": custo_manutencao,
+        "custo_pedagio": custo_pedagio,
         "custo_total": custo_total,
         "piso_anttt": piso_anttt,
         "preco_custo_margem": preco_custo_margem,

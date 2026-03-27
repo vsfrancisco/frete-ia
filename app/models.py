@@ -36,6 +36,7 @@ class SimulacaoFrete(Base):
     probabilidade_fechamento = Column(String, nullable=True)
     cliente_nome = Column(String(150), nullable=True)
     frete_fechado = Column(Boolean, default=False)
+    custo_pedagio = Column(Float, default=0.0)
 
 
 class Transportadora(Base):

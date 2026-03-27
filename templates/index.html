@@ -301,21 +301,30 @@
 
                 const result = await res.json();
 
+                // 1. Lógica do Badge de Risco
                 const rotaTexto = (dados.origem + " " + dados.destino).toUpperCase();
-            let badgeRisco = '<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold border border-green-200 inline-block mt-2">🟢 Risco Normal</span>';
-            
-            if (rotaTexto.includes('RJ') || rotaTexto.includes('RIO DE JANEIRO')) {
-                badgeRisco = '<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold border border-red-200 shadow-sm animate-pulse inline-block mt-2">🔴 Risco Alto (Roubo de Carga)</span>';
-            } else if (rotaTexto.includes('SP') || rotaTexto.includes('SÃO PAULO')) {
-                badgeRisco = '<span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 shadow-sm inline-block mt-2">🟡 Risco Médio (Tráfego/Pedágios)</span>';
-            }
+                let badgeRisco = '<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold border border-green-200 inline-block mt-2">🟢 Risco Normal</span>';
                 
-                // Preencher Resultados
-                document.getElementById('res-custo').innerText = formatarMoeda(result.custo_total);
+                if (rotaTexto.includes('RJ') || rotaTexto.includes('RIO DE JANEIRO')) {
+                    badgeRisco = '<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold border border-red-200 shadow-sm animate-pulse inline-block mt-2">🔴 Risco Alto (Roubo de Carga)</span>';
+                } else if (rotaTexto.includes('SP') || rotaTexto.includes('SÃO PAULO')) {
+                    badgeRisco = '<span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 shadow-sm inline-block mt-2">🟡 Risco Médio (Tráfego/Pedágios)</span>';
+                }
+
+                // 2. Preencher Resultados
+                // Em vez de só colocar o custo total, vamos colocar o HTML inteiro com Diesel, Manutenção e Pedágio
+                const detalhesCusto = `
+                    <p class="text-sm text-gray-600 mt-2">⛽ Diesel: <strong>${formatarMoeda(result.custo_diesel)}</strong></p>
+                    <p class="text-sm text-gray-600">🛠️ Manutenção: <strong>${formatarMoeda(result.custo_manutencao)}</strong></p>
+                    <p class="text-sm text-gray-600">🛣️ Pedágio (Est.): <strong>${formatarMoeda(result.custo_pedagio || 0)}</strong></p>
+                    ${badgeRisco}
+                `;
+
+                document.getElementById('res-custo').innerHTML = `${formatarMoeda(result.custo_total)} ${detalhesCusto}`;
                 document.getElementById('res-antt').innerText = formatarMoeda(result.piso_anttt);
                 document.getElementById('res-base').innerText = formatarMoeda(result.preco_sugerido);
                 document.getElementById('res-ia-preco').innerText = formatarMoeda(result.preco_ia);
-                
+
                 // Tratar a cor da probabilidade (verde pra alta, amarelo pra média)
                 const prob = parseFloat(result.probabilidade_fechamento).toFixed(1);
                 const probEl = document.getElementById('res-ia-prob');
