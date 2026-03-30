@@ -30,7 +30,7 @@ def criar_simulacao(db: Session, dados: schemas.SimulacaoCreate):
     
     calculo = calcular_frete_completo(dados, db)
     
-    dados_dict = dados.model_dump(exclude={"tipo_carga", "preco_diesel"})
+    dados_dict = dados.model_dump(exclude={"tipo_carga", "preco_diesel", "valor_carga", "taxa_seguro"})
     
     db_obj = models.SimulacaoFrete(
         **dados_dict,
@@ -38,6 +38,7 @@ def criar_simulacao(db: Session, dados: schemas.SimulacaoCreate):
         custo_diesel=calculo.get("custo_diesel"),
         custo_manutencao=calculo.get("custo_manutencao"),
         custo_pedagio=calculo.get("custo_pedagio"),
+        custo_seguro=calculo.get("custo_seguro"),
         custo_total=calculo.get("custo_total"),
         piso_anttt=calculo.get("piso_anttt"),
         preco_custo_margem=calculo.get("preco_custo_margem"),

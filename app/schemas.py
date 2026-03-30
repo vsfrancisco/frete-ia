@@ -45,6 +45,8 @@ class SimulacaoCreate(BaseModel):
     tipo_carga: str = "lotacao"
     cliente_nome: Optional[str] = None
     preco_diesel: Optional[float] = None
+    valor_carga: Optional[float] = 0.0
+    taxa_seguro: Optional[float] = 0.0
 
 class SimulacaoFrete(BaseModel):
     id: int
@@ -56,6 +58,7 @@ class SimulacaoFrete(BaseModel):
     custo_diesel: float
     custo_manutencao: float
     custo_pedagio: float = 0.0
+    custo_seguro: float = 0.0
     custo_total: float
     piso_anttt: Optional[float]
     preco_custo_margem: Optional[float]

@@ -11,39 +11,46 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     if not transportadora or not veiculo:
         raise ValueError("Transportadora ou Veículo não encontrado")
         
-    if not dados.distancia_km or dados.distancia_km <= 0:
+    if not getattr(dados, 'distancia_km', 0) or dados.distancia_km <= 0:
         dados.distancia_km = calcular_distancia_osrm(dados.origem, dados.destino)
 
     uf_origem = "SP"
     if "/" in dados.origem:
         uf_origem = dados.origem.split("/")[-1].strip().upper()
 
-        tarifa_pedagio_por_km_eixo = 0.05  # Padrão Brasil (Norte/Nordeste/Centro-Oeste)
-    if uf_origem == "SP":
-        tarifa_pedagio_por_km_eixo = 0.15  # SP tem mais praças e é mais caro
-    elif uf_origem in ["RJ", "PR", "SC", "RS", "MG"]:
-        tarifa_pedagio_por_km_eixo = 0.10
-    
-    # Se por algum motivo o veículo estiver sem eixo cadastrado, assumimos mínimo de 2 eixos
-    eixos_cobrados = veiculo.eixos if veiculo.eixos and veiculo.eixos > 0 else 2
-    custo_pedagio = dados.distancia_km * tarifa_pedagio_por_km_eixo * eixos_cobrados
-
-        # Se o usuário digitou o diesel na tela, usa ele. Senão, busca do banco.
+    # Preço do Diesel (do form ou do banco)
     if hasattr(dados, 'preco_diesel') and dados.preco_diesel and dados.preco_diesel > 0:
         preco_litro_diesel = dados.preco_diesel
     else:
         diesel_db = db.query(PrecoDiesel).filter(PrecoDiesel.uf == uf_origem).first()
         preco_litro_diesel = diesel_db.preco_medio if diesel_db else 6.50
-
     
     # 1. CUSTOS DA VIAGEM COMPLETA (CAMINHÃO CHEIO)
+    # 1.1 Diesel
     if veiculo.consumo_km_l and veiculo.consumo_km_l > 0:
         custo_diesel_full = (dados.distancia_km / veiculo.consumo_km_l) * preco_litro_diesel
     else:
         custo_diesel_full = (dados.distancia_km / 2.5) * preco_litro_diesel
         
+    # 1.2 Manutenção
     custo_manutencao_full = dados.distancia_km * transportadora.custo_manutencao_por_km
-    custo_total_full = custo_diesel_full + custo_manutencao_full + custo_pedagio
+    
+    # 1.3 Pedágio
+    eixos_cobrados = veiculo.eixos if veiculo.eixos and veiculo.eixos > 0 else 2
+    tarifa_pedagio_por_km_eixo = 0.05
+    if uf_origem == "SP":
+        tarifa_pedagio_por_km_eixo = 0.15
+    elif uf_origem in ["RJ", "PR", "SC", "RS", "MG"]:
+        tarifa_pedagio_por_km_eixo = 0.10
+    custo_pedagio = dados.distancia_km * tarifa_pedagio_por_km_eixo * eixos_cobrados
+
+    # 1.4 Seguro da Carga
+    valor_carga = getattr(dados, 'valor_carga', 0.0) or 0.0
+    taxa_seguro = getattr(dados, 'taxa_seguro', 0.0) or 0.0
+    custo_seguro = valor_carga * (taxa_seguro / 100.0)
+
+    # 1.5 Custo Total Full
+    custo_total_full = custo_diesel_full + custo_manutencao_full + custo_pedagio + custo_seguro
     
     # 2. PISO ANTT (CAMINHÃO CHEIO)
     piso_row = db.query(TabelaAntt).filter(
@@ -55,7 +62,6 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     if piso_row:
         piso_anttt_full = (piso_row.coef_deslocamento * dados.distancia_km) + piso_row.coef_carga_descarga
     else:
-        # PLANO B: Se não achar os eixos ou a distância no banco, aplica uma fórmula média nacional
         coef_deslocamento_medio = 1.15 * veiculo.eixos
         coef_carga_descarga_medio = 45.00 * veiculo.eixos
         piso_anttt_full = (coef_deslocamento_medio * dados.distancia_km) + coef_carga_descarga_medio
@@ -64,18 +70,15 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     tipo = getattr(dados, "tipo_carga", "lotacao")
     
     if tipo == "fracionada":
-        # Descobre a porcentagem que a carga ocupa no veículo (máximo 100%)
         proporcao = min(dados.peso_kg / veiculo.capacidade_kg, 1.0)
-        
-        # Adicionamos uma taxa fixa para cobrir custos de coleta/entrega/manuseio
         taxa_operacional_fracionado = 50.00 
         
         custo_diesel = custo_diesel_full * proporcao
         custo_manutencao = custo_manutencao_full * proporcao
-        custo_total = (custo_total_full * proporcao) + taxa_operacional_fracionado
+        # O seguro não é fracionado, entra o valor inteiro pois a carga é do cliente
+        custo_total = (custo_diesel + custo_manutencao + (custo_pedagio * proporcao) + taxa_operacional_fracionado) + custo_seguro
         piso_anttt = piso_anttt_full * proporcao
     else:
-        # Lotação padrão
         custo_diesel = custo_diesel_full
         custo_manutencao = custo_manutencao_full
         custo_total = custo_total_full
@@ -91,6 +94,7 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
         "custo_diesel": custo_diesel,
         "custo_manutencao": custo_manutencao,
         "custo_pedagio": custo_pedagio,
+        "custo_seguro": custo_seguro,
         "custo_total": custo_total,
         "piso_anttt": piso_anttt,
         "preco_custo_margem": preco_custo_margem,
