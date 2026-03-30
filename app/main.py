@@ -1,10 +1,12 @@
-from fastapi import FastAPI, Depends, Request, Body
+import secrets
+from fastapi import FastAPI, Depends, Request, Body, HTTPException, status
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.services.gerar_pdf import gerar_relatorio_frete
 from sqlalchemy import func
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from .database import Base, engine, SessionLocal
 from . import models, crud
@@ -13,6 +15,25 @@ from .schemas import Transportadora, TransportadoraCreate, SimulacaoFrete, Simul
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+security = HTTPBasic()
+
+def verificar_credenciais(credentials: HTTPBasicCredentials = Depends(security)):
+    # Defina aqui o seu usuário e senha master
+    usuario_correto = b"victor"
+    senha_correta = b"frete2026"
+    
+    # O secrets.compare_digest evita ataques de tempo de hacker
+    usuario_valido = secrets.compare_digest(credentials.username.encode("utf8"), usuario_correto)
+    senha_valida = secrets.compare_digest(credentials.password.encode("utf8"), senha_correta)
+    
+    if not (usuario_valido and senha_valida):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário ou senha incorretos",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -25,7 +46,7 @@ def get_db():
         db.close()
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+async def home(request: Request, username: str = Depends(verificar_credenciais)):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/health")
@@ -117,7 +138,7 @@ def gerar_pdf(dados: dict):
 
 # 1. Rota para a tela HTML do Histórico
 @app.get("/historico")
-def tela_historico(request: Request):
+def tela_historico(request: Request, username: str = Depends(verificar_credenciais)):
     return templates.TemplateResponse("historico.html", {"request": request})
 
 # 2. Rota que puxa as últimas simulações do banco
