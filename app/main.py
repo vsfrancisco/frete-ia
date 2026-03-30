@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from app.services.gerar_pdf import gerar_relatorio_frete
 from sqlalchemy import func
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from app.services.calculo_frete import calcular_cotacao_spot
+from app.schemas import SimulacaoSpotResponse, OpcaoSpot
 
 from .database import Base, engine, SessionLocal
 from . import models, crud
@@ -181,4 +183,22 @@ def obter_metricas(db: Session = Depends(get_db)):
         "lucro_estimado": lucro
     }
 
-
+@app.post("/api/simulacoes/spot", response_model=SimulacaoSpotResponse)
+def criar_cotacao_spot(dados: SimulacaoCreate, db: Session = Depends(get_db)):
+    # 1. Roda o motor de cotação em massa
+    opcoes_spot = calcular_cotacao_spot(dados, db)
+    
+    if not opcoes_spot:
+        raise HTTPException(status_code=400, detail="Nenhum veículo encontrado que suporte esta carga.")
+        
+    # 2. Salva apenas a opção MAIS BARATA (a primeira da lista) no Histórico oficial
+    dados.transportadora_id = db.query(models.Transportadora).filter(models.Transportadora.nome == opcoes_spot[0]["transportadora_nome"]).first().id
+    dados.veiculo_id = db.query(models.Veiculo).filter(models.Veiculo.nome.startswith(opcoes_spot[0]["veiculo_nome"].split(" ")[0])).first().id
+    
+    simulacao_salva = crud.criar_simulacao(db, dados)
+    
+    # 3. Retorna a lista completa pro painel
+    return {
+        "id_simulacao_principal": simulacao_salva.id,
+        "opcoes": opcoes_spot
+    }

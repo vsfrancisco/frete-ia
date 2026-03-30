@@ -97,3 +97,15 @@ class PrecoDiesel(PrecoDieselBase):
     id: int
     class Config:
         from_attributes = True
+
+class OpcaoSpot(BaseModel):
+    transportadora_nome: str
+    veiculo_nome: str
+    custo_total: float
+    preco_sugerido: float
+    preco_ia: float
+    probabilidade_fechamento: float
+
+class SimulacaoSpotResponse(BaseModel):
+    id_simulacao_principal: int
+    opcoes: list[OpcaoSpot]

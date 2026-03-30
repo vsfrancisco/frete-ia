@@ -103,3 +103,48 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
         "preco_ia": dica_ia["preco_ia"],
         "probabilidade_fechamento": dica_ia["probabilidade_fechamento"]
     }
+
+def calcular_cotacao_spot(dados: SimulacaoCreate, db: Session):
+    # 1. Calcular a distância apenas uma vez, se não foi fornecida
+    if not getattr(dados, 'distancia_km', 0) or dados.distancia_km <= 0:
+        dados.distancia_km = calcular_distancia_osrm(dados.origem, dados.destino)
+        
+    # 2. Buscar todas as transportadoras e seus veículos
+    transportadoras = db.query(Transportadora).all()
+    
+    opcoes_geradas = []
+    
+    for transp in transportadoras:
+        veiculos = db.query(Veiculo).filter(Veiculo.transportadora_id == transp.id).all()
+        
+        for veiculo in veiculos:
+            # Filtro básico: o veículo aguenta o peso? (Só pular se for lotação e o peso for maior que a capacidade)
+            tipo = getattr(dados, "tipo_carga", "lotacao")
+            if tipo == "lotacao" and dados.peso_kg > veiculo.capacidade_kg:
+                continue # Pula para o próximo veículo, esse não aguenta
+                
+            # Força temporariamente o ID da transportadora e veículo para usar a função que já existe
+            dados_temp = dados.model_copy()
+            dados_temp.transportadora_id = transp.id
+            dados_temp.veiculo_id = veiculo.id
+            
+            try:
+                # Usa a mesma matemática super afiada que já criamos
+                calculo = calcular_frete_completo(dados_temp, db)
+                
+                opcoes_geradas.append({
+                    "transportadora_nome": transp.nome,
+                    "veiculo_nome": f"{veiculo.nome} ({veiculo.capacidade_kg}kg)",
+                    "custo_total": calculo["custo_total"],
+                    "preco_sugerido": calculo["preco_sugerido"],
+                    "preco_ia": calculo["preco_ia"],
+                    "probabilidade_fechamento": calculo["probabilidade_fechamento"]
+                })
+            except Exception as e:
+                print(f"Erro ao calcular para {transp.nome} - {veiculo.nome}: {e}")
+                continue
+                
+    # Ordenar as opções do preço mais barato para o mais caro (usando o preço IA como base)
+    opcoes_geradas = sorted(opcoes_geradas, key=lambda k: k['preco_ia'])
+    
+    return opcoes_geradas
