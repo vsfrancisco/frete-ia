@@ -26,6 +26,11 @@
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold text-gray-800">Histórico de Cotações (CRM)</h2>
                     <!-- Cards de Métricas (Dashboard) -->
+            <button onclick="cadastrarClienteVIP()" class="bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300 font-medium py-2 px-4 rounded-md shadow-sm transition text-sm flex items-center gap-2">
+                ⭐ Cadastrar Cliente VIP
+            </button>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between">
                 <div>
@@ -150,6 +155,33 @@
                 document.getElementById('metrica-lucro').innerText = formatarMoeda(met.lucro_estimado);
             } catch (e) {
                 console.error("Erro nas métricas:", e);
+            }
+        }
+
+                async function cadastrarClienteVIP() {
+            const nome = prompt("Digite o nome exato do cliente (Ex: Mercado Livre):");
+            if (!nome) return;
+            
+            const desconto = prompt(`Qual o % de desconto para ${nome}? (Ex: 5 para 5%):`);
+            if (!desconto || isNaN(parseFloat(desconto))) return;
+
+            try {
+                const res = await fetch('/api/clientes-vip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome: nome.trim(),
+                        desconto_percentual: parseFloat(desconto)
+                    })
+                });
+
+                if (res.ok) {
+                    alert(`✅ Cliente ${nome} agora tem ${desconto}% de desconto automático!`);
+                } else {
+                    alert("Erro ao salvar cliente VIP.");
+                }
+            } catch (e) {
+                alert("Erro de conexão.");
             }
         }
         

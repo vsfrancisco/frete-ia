@@ -70,3 +70,10 @@ class PrecoDiesel(Base):
     preco_medio = Column(Float)
     data_atualizacao = Column(DateTime, default=datetime.utcnow)
 
+class ClienteVIP(Base):
+    __tablename__ = "cliente_vip"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(150), unique=True, index=True, nullable=False)
+    desconto_percentual = Column(Float, default=0.0)
+    ativo = Column(Boolean, default=True)

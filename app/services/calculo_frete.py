@@ -84,17 +84,34 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
         custo_total = custo_total_full
         piso_anttt = piso_anttt_full
         
-    # 4. PREÇO FINAL E IA
+        # 4. PREÇO FINAL E IA
     preco_custo_margem = custo_total * (1 + transportadora.margem_percentual / 100.0)
     preco_sugerido = max(preco_custo_margem, piso_anttt) if piso_anttt > 0 else preco_custo_margem
     
     dica_ia = sugerir_preco_ia(dados.distancia_km, dados.peso_kg, custo_total, piso_anttt)
     
+    # --- NOVA LÓGICA: DESCONTO VIP ---
+    cliente_nome = getattr(dados, 'cliente_nome', None)
+    if cliente_nome:
+        from app.models import ClienteVIP 
+        # Procura se esse nome digitado existe na tabela de VIPs
+        cliente_vip = db.query(ClienteVIP).filter(ClienteVIP.nome.ilike(f"%{cliente_nome}%"), ClienteVIP.ativo == True).first()
+        
+        if cliente_vip and cliente_vip.desconto_percentual > 0:
+            # Aplica o desconto em cima do preço sugerido pela IA
+            desconto = dica_ia["preco_ia"] * (cliente_vip.desconto_percentual / 100.0)
+            dica_ia["preco_ia"] = max(dica_ia["preco_ia"] - desconto, piso_anttt) # Nunca vende abaixo da ANTT
+            
+            # Força a probabilidade de fechamento pra cima, afinal é cliente de contrato!
+            prob_atual = float(dica_ia.get("probabilidade_fechamento", 50.0))
+            dica_ia["probabilidade_fechamento"] = min(prob_atual + 15.0, 99.0)
+    # ----------------------------------
+    
     return {
         "custo_diesel": custo_diesel,
         "custo_manutencao": custo_manutencao,
         "custo_pedagio": custo_pedagio,
-        "custo_seguro": custo_seguro,
+        "custo_seguro": getattr(locals(), 'custo_seguro', 0.0), # <--- Proteção caso o seguro não tenha sido calculado
         "custo_total": custo_total,
         "piso_anttt": piso_anttt,
         "preco_custo_margem": preco_custo_margem,

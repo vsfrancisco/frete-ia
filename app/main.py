@@ -9,6 +9,8 @@ from sqlalchemy import func
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from app.services.calculo_frete import calcular_cotacao_spot
 from app.schemas import SimulacaoSpotResponse, OpcaoSpot
+from app.models import ClienteVIP
+from app.schemas import ClienteVIPCreate, ClienteVIPResponse
 
 from .database import Base, engine, SessionLocal
 from . import models, crud
@@ -202,3 +204,25 @@ def criar_cotacao_spot(dados: SimulacaoCreate, db: Session = Depends(get_db)):
         "id_simulacao_principal": simulacao_salva.id,
         "opcoes": opcoes_spot
     }
+
+# 2. Rotas da API para gerenciar os clientes VIP
+@app.get("/api/clientes-vip", response_model=list[ClienteVIPResponse])
+def listar_clientes_vip(db: Session = Depends(get_db)):
+    return db.query(ClienteVIP).filter(ClienteVIP.ativo == True).all()
+
+@app.post("/api/clientes-vip", response_model=ClienteVIPResponse)
+def criar_cliente_vip(cliente: ClienteVIPCreate, db: Session = Depends(get_db)):
+    # Tenta achar se já existe, para não duplicar
+    db_cliente = db.query(ClienteVIP).filter(ClienteVIP.nome.ilike(f"%{cliente.nome}%")).first()
+    if db_cliente:
+        db_cliente.desconto_percentual = cliente.desconto_percentual
+        db_cliente.ativo = True
+        db.commit()
+        db.refresh(db_cliente)
+        return db_cliente
+        
+    novo_cliente = ClienteVIP(**cliente.model_dump())
+    db.add(novo_cliente)
+    db.commit()
+    db.refresh(novo_cliente)
+    return novo_cliente

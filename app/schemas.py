@@ -109,3 +109,16 @@ class OpcaoSpot(BaseModel):
 class SimulacaoSpotResponse(BaseModel):
     id_simulacao_principal: int
     opcoes: list[OpcaoSpot]
+
+class ClienteVIPBase(BaseModel):
+    nome: str
+    desconto_percentual: float
+    ativo: bool = True
+
+class ClienteVIPCreate(ClienteVIPBase):
+    pass
+
+class ClienteVIPResponse(ClienteVIPBase):
+    id: int
+    class Config:
+        from_attributes = True
