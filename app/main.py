@@ -11,6 +11,7 @@ from app.services.calculo_frete import calcular_cotacao_spot
 from app.schemas import SimulacaoSpotResponse, OpcaoSpot
 from app.models import ClienteVIP
 from app.schemas import ClienteVIPCreate, ClienteVIPResponse
+from app.core.config import settings
 
 from .database import Base, engine, SessionLocal
 from . import models, crud
@@ -23,13 +24,17 @@ app = FastAPI()
 security = HTTPBasic()
 
 def verificar_credenciais(credentials: HTTPBasicCredentials = Depends(security)):
-    # Defina aqui o seu usuário e senha master
-    usuario_correto = b"victor"
-    senha_correta = b"frete2026"
+    # Pega as senhas digitadas pelo usuário (vem do navegador)
+    usuario_digitado = credentials.username.encode("utf-8")
+    senha_digitada = credentials.password.encode("utf-8")
+    
+    # Pega as senhas oficias (vem do seu .env através do settings)
+    usuario_correto = settings.admin_user.encode("utf-8")
+    senha_correta = settings.admin_password.encode("utf-8")
     
     # O secrets.compare_digest evita ataques de tempo de hacker
-    usuario_valido = secrets.compare_digest(credentials.username.encode("utf8"), usuario_correto)
-    senha_valida = secrets.compare_digest(credentials.password.encode("utf8"), senha_correta)
+    usuario_valido = secrets.compare_digest(usuario_digitado, usuario_correto)
+    senha_valida = secrets.compare_digest(senha_digitada, senha_correta)
     
     if not (usuario_valido and senha_valida):
         raise HTTPException(
