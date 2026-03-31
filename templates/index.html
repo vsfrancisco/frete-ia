@@ -17,28 +17,42 @@
 <body class="text-gray-800 h-screen flex flex-col">
 
         <!-- Navbar -->
-    <header class="bg-indigo-600 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <header class="bg-indigo-600 shadow-md">
+        <!-- justify-between empurra o Logo para a esquerda e os botões para a direita -->
+        <div class="flex flex-wrap items-center justify-between p-4 max-w-7xl mx-auto w-full gap-4">
+            
+            <!-- LADO ESQUERDO: Logo -->
             <div class="flex items-center gap-2">
                 <span class="text-2xl text-white">🚚</span>
                 <h1 class="text-xl font-bold text-white tracking-wide">Frete IA <span class="text-indigo-200 text-sm font-normal">Pro</span></h1>
             </div>
 
+            <!-- LADO DIREITO: Todos os botões agrupados -->
+            <div class="flex flex-wrap items-center justify-end gap-3">
+                
+                <!-- Botão Configurações -->
+                <button onclick="abrirModalConfig()" class="bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium py-2 px-4 rounded-md shadow-sm transition flex items-center gap-2 whitespace-nowrap border border-gray-700">
+                    ⚙️ Configurações
+                </button>
 
-            <a href="/cadastro-transportadora" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400 shadow-sm flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Nova Transportadora
-            </a>
-            <a href="/cadastro-veiculo" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400 shadow-sm flex items-center gap-2">
+                <!-- Nova Transportadora -->
+                <a href="/cadastro-transportadora" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400 shadow-sm flex items-center gap-2 whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Nova Transportadora
+                </a>
+                
+                <!-- Veículo -->
+                <a href="/cadastro-veiculo" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400 shadow-sm flex items-center gap-2 whitespace-nowrap">
                     + Veículo
                 </a>
-            
-                <a href="/historico" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400 shadow-sm flex items-center gap-2">
+                
+                <!-- Histórico -->
+                <a href="/historico" class="text-white text-sm bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-md transition font-medium border border-indigo-400 shadow-sm flex items-center gap-2 whitespace-nowrap">
                     📋 Histórico
                 </a>
-
+                
+            </div>
         </div>
-        
     </header>
 
 
@@ -110,24 +124,24 @@
                     </div>
                 </div>
 
-                <!-- Variação do Diesel -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Preço do Diesel (R$/L)</label>
-                    <input type="number" step="0.01" id="preco_diesel" value="6.50" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm transition">
-                </div>
-
-                                <!-- Dados de Seguro -->
+                <!-- Valor da carga -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Valor da Carga (R$)</label>
                         <input type="number" step="0.01" id="valor_carga" placeholder="Ex: 50000" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm transition">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Taxa de Seguro (%)</label>
-                        <input type="number" step="0.01" id="taxa_seguro" value="0.30" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm transition">
-                    </div>
+                        </div>
                 </div>
 
+                <!-- Aviso sobre as Configurações Globais -->
+                <div class="col-span-1 md:col-span-2 bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg shadow-sm mt-2 mb-4">
+                    <div class="flex items-center">
+                        <svg class="h-5 w-5 text-indigo-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p class="text-sm text-indigo-800">
+                            <strong>Dica:</strong> O sistema utilizará os valores de <em>Diesel</em>, <em>Seguro</em> e <em>Margem</em> definidos nas suas 
+                            <button type="button" onclick="abrirModalConfig()" class="text-indigo-600 font-bold hover:underline focus:outline-none">⚙️ Configurações</button> globais.
+                        </p>
+                    </div>
+                </div>
 
                 <button type="submit" id="btn-calcular" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-md shadow transition flex justify-center items-center gap-2">
                     <span>Calcular Frete com IA</span>
@@ -238,6 +252,38 @@
 
         </section>
     </main>
+
+        <!-- Modal de Configurações (Fica escondido por padrão) -->
+    <div id="modal-config" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">⚙️ Configurações do Sistema</h2>
+                <button type="button" onclick="fecharModalConfig()" class="text-gray-500 hover:text-red-500 font-bold text-2xl">&times;</button>
+            </div>
+            
+            <form id="form-config" onsubmit="salvarConfiguracoes(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">⛽ Preço do Diesel (R$)</label>
+                        <input type="number" id="config-diesel" step="0.01" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">🛡️ Taxa de Seguro (%)</label>
+                        <input type="number" id="config-seguro" step="0.01" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">📈 Margem Padrão (%)</label>
+                        <input type="number" id="config-margem" step="0.01" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" onclick="fecharModalConfig()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg font-medium">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-bold">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Scripts da Aplicação -->
     <script>
@@ -565,6 +611,59 @@
             // Abre em uma nova aba
             window.open(urlWhatsApp, '_blank');
         };
+
+                // --- LÓGICA DO MODAL DE CONFIGURAÇÕES ---
+        const modalConfig = document.getElementById('modal-config');
+
+        async function abrirModalConfig() {
+            modalConfig.classList.remove('hidden'); // Mostra a janelinha
+            
+            // Vai no garçom do backend buscar os valores que estão no banco
+            try {
+                const res = await fetch('/api/configuracoes/');
+                const config = await res.json();
+                
+                // Preenche os campos da tela com os valores do banco
+                document.getElementById('config-diesel').value = config.preco_diesel;
+                document.getElementById('config-seguro').value = config.taxa_seguro;
+                document.getElementById('config-margem').value = config.margem_padrao;
+            } catch (error) {
+                console.error("Erro ao carregar configurações:", error);
+            }
+        }
+
+        function fecharModalConfig() {
+            modalConfig.classList.add('hidden'); // Esconde a janelinha
+        }
+
+        async function salvarConfiguracoes(event) {
+            event.preventDefault(); // Impede a página de piscar/recarregar
+            
+            const dados = {
+                preco_diesel: parseFloat(document.getElementById('config-diesel').value),
+                taxa_seguro: parseFloat(document.getElementById('config-seguro').value),
+                margem_padrao: parseFloat(document.getElementById('config-margem').value)
+            };
+
+            try {
+                const res = await fetch('/api/configuracoes/', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                
+                if (res.ok) {
+                    alert("✅ Configurações salvas com sucesso no banco de dados!");
+                    fecharModalConfig();
+                } else {
+                    alert("❌ Erro ao salvar configurações.");
+                }
+            } catch (error) {
+                console.error("Erro ao salvar:", error);
+                alert("Erro de conexão ao tentar salvar.");
+            }
+        }
+
     </script>
 </body>
 </html>

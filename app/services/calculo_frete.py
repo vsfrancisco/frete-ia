@@ -3,8 +3,19 @@ from ..schemas import SimulacaoCreate
 from ..models import Transportadora, TabelaAntt, PrecoDiesel, Veiculo
 from .mapas import calcular_distancia_osrm
 from .ia_frete import sugerir_preco_ia
+from app.database import SessionLocal
+from app.models import Configuracao
 
-def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
+def calcular_frete_completo(dados, db: Session):
+    # --- BUSCAR CONFIGURAÇÕES DO SISTEMA ---
+    from app.models import Configuracao # Importado aqui dentro para garantir
+    config = db.query(Configuracao).first()
+    
+    # Valores de fallback caso a tabela esteja vazia
+    config_preco_diesel = config.preco_diesel if config else 5.90
+    config_taxa_seguro = config.taxa_seguro if config else 0.30
+    config_margem_padrao = config.margem_padrao if config else 20.0
+
     transportadora = db.query(Transportadora).filter(Transportadora.id == dados.transportadora_id).first()
     veiculo = db.query(Veiculo).filter(Veiculo.id == dados.veiculo_id).first()
     
@@ -18,12 +29,13 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     if "/" in dados.origem:
         uf_origem = dados.origem.split("/")[-1].strip().upper()
 
-    # Preço do Diesel (do form ou do banco)
+    # --- DEFINIR PREÇO DO DIESEL ---
+    # Prioridade: 1. Digitado na tela | 2. Configurações do Sistema | 3. Banco de Preços UF
     if hasattr(dados, 'preco_diesel') and dados.preco_diesel and dados.preco_diesel > 0:
         preco_litro_diesel = dados.preco_diesel
     else:
-        diesel_db = db.query(PrecoDiesel).filter(PrecoDiesel.uf == uf_origem).first()
-        preco_litro_diesel = diesel_db.preco_medio if diesel_db else 6.50
+        # Puxa o valor da nossa NOVA tabela de configurações!
+        preco_litro_diesel = config_preco_diesel
     
     # 1. CUSTOS DA VIAGEM COMPLETA (CAMINHÃO CHEIO)
     # 1.1 Diesel
@@ -45,12 +57,12 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     custo_pedagio = dados.distancia_km * tarifa_pedagio_por_km_eixo * eixos_cobrados
 
     # 1.4 Seguro da Carga
-    # Garante que o valor existe e vira número (0.0 caso não venha)
     valor_carga = float(getattr(dados, 'valor_carga', 0.0) or 0.0)
-    taxa_seguro = float(getattr(dados, 'taxa_seguro', 0.0) or 0.0)
+    taxa_seguro_tela = float(getattr(dados, 'taxa_seguro', 0.0) or 0.0)
     
-    # O Pulo do Gato: se o usuário digitou a taxa, calcula o valor!
-    custo_seguro = valor_carga * (taxa_seguro / 100.0)
+    # Prioridade do Seguro: 1. Digitado na tela | 2. Configurações do Sistema
+    taxa_seguro_final = taxa_seguro_tela if taxa_seguro_tela > 0 else config_taxa_seguro
+    custo_seguro = valor_carga * (taxa_seguro_final / 100.0)
 
     # 1.5 Custo Total Full
     custo_total_full = custo_diesel_full + custo_manutencao_full + custo_pedagio + custo_seguro
@@ -87,25 +99,24 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
         custo_total = custo_total_full
         piso_anttt = piso_anttt_full
         
-        # 4. PREÇO FINAL E IA
-    preco_custo_margem = custo_total * (1 + transportadora.margem_percentual / 100.0)
+    # 4. PREÇO FINAL E IA
+    # Usa a margem que está na tabela de configuração!
+    margem_final = config_margem_padrao if config_margem_padrao > 0 else transportadora.margem_percentual
+    preco_custo_margem = custo_total * (1 + margem_final / 100.0)
+    
     preco_sugerido = max(preco_custo_margem, piso_anttt) if piso_anttt > 0 else preco_custo_margem
     
     dica_ia = sugerir_preco_ia(dados.distancia_km, dados.peso_kg, custo_total, piso_anttt)
     
-    # --- NOVA LÓGICA: DESCONTO VIP ---
+    # --- LÓGICA VIP MANTIDA ---
     cliente_nome = getattr(dados, 'cliente_nome', None)
     if cliente_nome:
         from app.models import ClienteVIP 
-        # Procura se esse nome digitado existe na tabela de VIPs
         cliente_vip = db.query(ClienteVIP).filter(ClienteVIP.nome.ilike(f"%{cliente_nome}%"), ClienteVIP.ativo == True).first()
         
         if cliente_vip and cliente_vip.desconto_percentual > 0:
-            # Aplica o desconto em cima do preço sugerido pela IA
             desconto = dica_ia["preco_ia"] * (cliente_vip.desconto_percentual / 100.0)
-            dica_ia["preco_ia"] = max(dica_ia["preco_ia"] - desconto, piso_anttt) # Nunca vende abaixo da ANTT
-            
-            # Força a probabilidade de fechamento pra cima, afinal é cliente de contrato!
+            dica_ia["preco_ia"] = max(dica_ia["preco_ia"] - desconto, piso_anttt)
             prob_atual = float(dica_ia.get("probabilidade_fechamento", 50.0))
             dica_ia["probabilidade_fechamento"] = min(prob_atual + 15.0, 99.0)
     # ----------------------------------
@@ -114,17 +125,17 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
         "custo_diesel": custo_diesel,
         "custo_manutencao": custo_manutencao,
         "custo_pedagio": custo_pedagio,
-        "custo_seguro": custo_seguro, # <--- Proteção caso o seguro não tenha sido calculado
+        "custo_seguro": custo_seguro,
         "custo_total": custo_total,
         "piso_anttt": piso_anttt,
         "preco_custo_margem": preco_custo_margem,
         "preco_sugerido": preco_sugerido,
-        "margem_ia": dica_ia["margem_ia"],
-        "preco_ia": dica_ia["preco_ia"],
-        "probabilidade_fechamento": dica_ia["probabilidade_fechamento"]
+        "margem_ia": dica_ia.get("margem_ia", margem_final),
+        "preco_ia": dica_ia.get("preco_ia", preco_sugerido),
+        "probabilidade_fechamento": dica_ia.get("probabilidade_fechamento", 50.0)
     }
 
-def calcular_cotacao_spot(dados: SimulacaoCreate, db: Session):
+def calcular_cotacao_spot(dados, db: Session): # Ajustei o type hint se necessário
     print("--- INICIANDO COTAÇÃO SPOT ---")
     
     # 1. Distância
@@ -152,6 +163,8 @@ def calcular_cotacao_spot(dados: SimulacaoCreate, db: Session):
             dados_temp.veiculo_id = veiculo.id
             
             try:
+                # O Pulo do Gato: Chama a função mãe passando o db. 
+                # O motor inteligente já vai aplicar o Diesel e Seguro da nova tela!
                 calculo = calcular_frete_completo(dados_temp, db)
                 
                 opcoes_geradas.append({
@@ -160,7 +173,13 @@ def calcular_cotacao_spot(dados: SimulacaoCreate, db: Session):
                     "custo_total": calculo["custo_total"],
                     "preco_sugerido": calculo["preco_sugerido"],
                     "preco_ia": calculo["preco_ia"],
-                    "probabilidade_fechamento": calculo["probabilidade_fechamento"]
+                    "probabilidade_fechamento": calculo["probabilidade_fechamento"],
+                    
+                    # --- NOVOS CAMPOS ADICIONADOS PARA O FRONTEND ---
+                    "custo_seguro": calculo.get("custo_seguro", 0.0),
+                    "custo_diesel": calculo.get("custo_diesel", 0.0),
+                    "custo_pedagio": calculo.get("custo_pedagio", 0.0),
+                    "margem_ia": calculo.get("margem_ia", 0.0)
                 })
             except Exception as e:
                 # DETETIVE AQUI: Se der erro, ele vai gritar no terminal!
@@ -173,6 +192,6 @@ def calcular_cotacao_spot(dados: SimulacaoCreate, db: Session):
         print("⚠️ NENHUMA OPÇÃO FOI GERADA!")
         return []
 
-    # Ordenar
+    # Ordenar pelo menor preço de IA
     opcoes_geradas = sorted(opcoes_geradas, key=lambda k: k['preco_ia'])
     return opcoes_geradas

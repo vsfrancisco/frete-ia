@@ -80,3 +80,11 @@ class ClienteVIP(Base):
     nome = Column(String(150), unique=True, index=True, nullable=False)
     desconto_percentual = Column(Float, default=0.0)
     ativo = Column(Boolean, default=True)
+
+class Configuracao(Base):
+    __tablename__ = "configuracoes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    preco_diesel = Column(Float, default=5.90)
+    taxa_seguro = Column(Float, default=0.30)
+    margem_padrao = Column(Float, default=20.0)
