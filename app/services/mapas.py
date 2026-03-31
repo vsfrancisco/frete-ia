@@ -10,34 +10,40 @@ def buscar_coordenadas(cidade_estado: str):
     url = f"https://nominatim.openstreetmap.org/search?q={query}&format=json&limit=1"
     
     headers = {
-        'User-Agent': 'FreteIA/1.0 (seuemail@exemplo.com)' # O Nominatim exige um User-Agent
+        'User-Agent': 'FreteIA/1.0 (seuemail@exemplo.com)' 
     }
     
-    response = requests.get(url, headers=headers)
+    # Adicionamos o timeout aqui também para garantir!
+    response = requests.get(url, headers=headers, timeout=5)
+    response.raise_for_status()
     
-    if response.status_code == 200 and len(response.json()) > 0:
-        dados = response.json()[0]
+    dados = response.json()
+    if len(dados) > 0:
         # Retorna lon, lat (nesta ordem para o OSRM)
-        return float(dados['lon']), float(dados['lat'])
+        return float(dados[0]['lon']), float(dados[0]['lat'])
     
     raise ValueError(f"Não foi possível encontrar a cidade: {cidade_estado}")
 
+
 def calcular_distancia_osrm(origem: str, destino: str) -> float:
-    """
-    Conecta Origem e Destino, pega as coordenadas, bate no OSRM e retorna a distância em KM.
-    """
-    lon_origem, lat_origem = buscar_coordenadas(origem)
-    lon_destino, lat_destino = buscar_coordenadas(destino)
-    
-    # URL da API de roteamento OSRM (pública)
-    url = f"http://router.project-osrm.org/route/v1/driving/{lon_origem},{lat_origem};{lon_destino},{lat_destino}?overview=false"
-    
-    response = requests.get(url)
-    if response.status_code == 200:
-        dados = response.json()
-        if dados.get("code") == "Ok":
-            distancia_metros = dados["routes"][0]["distance"]
-            distancia_km = distancia_metros / 1000.0
-            return round(distancia_km, 2)
-            
-    raise ValueError("Não foi possível traçar a rota entre as cidades.")
+    try:
+        # Usamos a função auxiliar que já trata os nomes difíceis
+        lon1, lat1 = buscar_coordenadas(origem)
+        lon2, lat2 = buscar_coordenadas(destino)
+
+        # Calcula a rota no OSRM
+        url_rota = f"http://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=false"
+        
+        # O timeout salvador de vidas
+        resp_rota = requests.get(url_rota, timeout=5)
+        resp_rota.raise_for_status()
+        dados_rota = resp_rota.json()
+
+        distancia_metros = dados_rota['routes'][0]['distance']
+        return distancia_metros / 1000.0
+
+    except Exception as e:
+        print(f"❌ Erro ao buscar distância no mapa: {e}")
+        # Se a API externa travar ou a internet cair, a gente retorna 500km provisórios 
+        # para a tela não travar infinitamente e o usuário poder digitar na mão.
+        return 500.0

@@ -173,10 +173,19 @@
                         </div>
                     </div>
                                     <!-- Botão de Download do PDF -->
-                <div class="flex gap-3 justify-center">
-                    <button id="btn-pdf" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow transition flex items-center gap-2">
+                                <!-- Botões de Ação Final (PDF e WhatsApp) -->
+                <div class="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+                    <!-- Botão do PDF que já existe -->
+                    <button id="btn-pdf" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow transition flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2m0 0v-8m0 8H3m6-6h12"></path></svg>
-                        Baixar Relatório em PDF
+                        Baixar PDF
+                    </button>
+
+                    <!-- NOVO: Botão do WhatsApp -->
+                    <button id="btn-whatsapp" class="bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-6 rounded-lg shadow transition flex items-center justify-center gap-2">
+                        <!-- Ícone do WhatsApp usando SVG simples -->
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.385 0 .002 5.388.002 12.035c0 2.12.553 4.195 1.603 6.01L.005 24l6.115-1.602c1.745.94 3.738 1.436 5.908 1.436 6.645 0 12.029-5.385 12.029-12.031C24.057 5.39 18.675 0 12.031 0zm3.872 17.202c-.594.168-1.747.531-2.909-.234-1.298-.857-2.617-2.316-3.418-3.411-.84-1.15-.999-1.956-.554-2.534.254-.33.6-.68.835-.953.226-.264.301-.448.452-.746.15-.298.075-.561-.038-.859-.113-.298-.508-1.226-.696-1.678-.184-.442-.37-.384-.508-.39-.133-.006-.285-.006-.436-.006-.151 0-.395.056-.602.28-.207.224-.79 .772-.79 1.88 0 1.107.809 2.176.922 2.324.113.15 1.584 2.418 3.839 3.393.536.232.955.371 1.282.474.538.17 1.026.146 1.414.088.431-.064 1.32-.54 1.508-1.06.188-.521.188-.967.132-1.061-.057-.093-.208-.15-.434-.262z"/></svg>
+                        Enviar por WhatsApp
                     </button>
                 </div>
 
@@ -324,7 +333,7 @@
             };
 
             try {
-                const res = await fetch('/simulacoes/', {
+                const res = await fetch('/api/simulacoes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(dados)
@@ -519,6 +528,42 @@
             } catch (error) {
                 alert("Erro ao gerar PDF: " + error.message);
             }
+        };
+
+                // Botão de WhatsApp
+        document.getElementById('btn-whatsapp').onclick = () => {
+            // Garantir que temos dados simulados
+            if (!ultimosDadosFrete || !ultimosDadosFrete.preco_ia) {
+                alert("Calcule um frete primeiro!");
+                return;
+            }
+
+            // Pega os dados básicos que o usuário digitou na tela
+            const origem = document.getElementById('origem').value || "Origem";
+            const destino = document.getElementById('destino').value || "Destino";
+            const peso = document.getElementById('peso_kg').value || "0";
+            const cliente = document.getElementById('cliente_nome').value || "Cliente";
+            
+            // Monta o texto bonitão (o %0A é o código para "pular de linha" no link)
+            let textoMsg = `Olá, *${cliente}*! 🚚%0A%0A`;
+            textoMsg += `Segue a cotação do seu frete solicitada:%0A%0A`;
+            textoMsg += `📍 *Rota:* ${origem} ➡️ ${destino}%0A`;
+            textoMsg += `📦 *Carga:* ${peso} kg%0A`;
+            
+            // Se o seguro foi calculado, mostra pro cliente pra agregar valor
+            if (ultimosDadosFrete.custo_seguro > 0) {
+                textoMsg += `🛡️ *Seguro (Ad Valorem):* Incluso%0A`;
+            }
+            
+            textoMsg += `%0A💰 *Valor Total do Frete:* ${formatarMoeda(ultimosDadosFrete.preco_ia)}%0A%0A`;
+            textoMsg += `_Validade desta cotação: 5 dias._%0A`;
+            textoMsg += `Vamos fechar negócio? Fico à disposição!`;
+
+            // Cria o link do WhatsApp (abre no app se tiver celular, ou no web no PC)
+            const urlWhatsApp = `https://api.whatsapp.com/send?text=${textoMsg}`;
+            
+            // Abre em uma nova aba
+            window.open(urlWhatsApp, '_blank');
         };
     </script>
 </body>

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
 
@@ -6,11 +7,12 @@ class Veiculo(Base):
     __tablename__ = "veiculo"
 
     id = Column(Integer, primary_key=True, index=True)
-    transportadora_id = Column(Integer, index=True) # A qual empresa pertence
+    transportadora_id = Column(Integer, ForeignKey("transportadora.id"), nullable=False)
     nome = Column(String)  # Ex: "Truck Baú", "Carreta LS"
     eixos = Column(Integer) # Ex: 3, 6
     consumo_km_l = Column(Float) # Substitui o consumo genérico da transportadora
     capacidade_kg = Column(Float)
+    transportadora = relationship("Transportadora", back_populates="veiculos")
 
 class SimulacaoFrete(Base):
     __tablename__ = "simulacao_frete"
@@ -49,6 +51,7 @@ class Transportadora(Base):
     margem_percentual = Column(Float)  # margem padrão
     custo_manutencao_por_km = Column(Float, default=0.15)  # R$/km
     custo_fixo_mensal = Column(Float, default=5000)  # rateado depois
+    veiculos = relationship("Veiculo", back_populates="transportadora")
 
 class TabelaAntt(Base):
     __tablename__ = "tabela_antt"

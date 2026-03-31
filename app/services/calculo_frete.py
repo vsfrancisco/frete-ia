@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from ..schemas import SimulacaoCreate
 from ..models import Transportadora, TabelaAntt, PrecoDiesel, Veiculo
 from .mapas import calcular_distancia_osrm
@@ -45,8 +45,11 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     custo_pedagio = dados.distancia_km * tarifa_pedagio_por_km_eixo * eixos_cobrados
 
     # 1.4 Seguro da Carga
-    valor_carga = getattr(dados, 'valor_carga', 0.0) or 0.0
-    taxa_seguro = getattr(dados, 'taxa_seguro', 0.0) or 0.0
+    # Garante que o valor existe e vira número (0.0 caso não venha)
+    valor_carga = float(getattr(dados, 'valor_carga', 0.0) or 0.0)
+    taxa_seguro = float(getattr(dados, 'taxa_seguro', 0.0) or 0.0)
+    
+    # O Pulo do Gato: se o usuário digitou a taxa, calcula o valor!
     custo_seguro = valor_carga * (taxa_seguro / 100.0)
 
     # 1.5 Custo Total Full
@@ -111,7 +114,7 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
         "custo_diesel": custo_diesel,
         "custo_manutencao": custo_manutencao,
         "custo_pedagio": custo_pedagio,
-        "custo_seguro": getattr(locals(), 'custo_seguro', 0.0), # <--- Proteção caso o seguro não tenha sido calculado
+        "custo_seguro": custo_seguro, # <--- Proteção caso o seguro não tenha sido calculado
         "custo_total": custo_total,
         "piso_anttt": piso_anttt,
         "preco_custo_margem": preco_custo_margem,
@@ -122,31 +125,33 @@ def calcular_frete_completo(dados: SimulacaoCreate, db: Session):
     }
 
 def calcular_cotacao_spot(dados: SimulacaoCreate, db: Session):
-    # 1. Calcular a distância apenas uma vez, se não foi fornecida
+    print("--- INICIANDO COTAÇÃO SPOT ---")
+    
+    # 1. Distância
     if not getattr(dados, 'distancia_km', 0) or dados.distancia_km <= 0:
         dados.distancia_km = calcular_distancia_osrm(dados.origem, dados.destino)
         
-    # 2. Buscar todas as transportadoras e seus veículos
-    transportadoras = db.query(Transportadora).all()
+    print(f"Distância: {dados.distancia_km} km")
+
+    # 2. Busca Otimizada (Eager Loading)
+    transportadoras = db.query(Transportadora).options(selectinload(Transportadora.veiculos)).all()
+    print(f"Transportadoras encontradas: {len(transportadoras)}")
     
     opcoes_geradas = []
     
     for transp in transportadoras:
-        veiculos = db.query(Veiculo).filter(Veiculo.transportadora_id == transp.id).all()
+        veiculos = transp.veiculos
         
         for veiculo in veiculos:
-            # Filtro básico: o veículo aguenta o peso? (Só pular se for lotação e o peso for maior que a capacidade)
             tipo = getattr(dados, "tipo_carga", "lotacao")
             if tipo == "lotacao" and dados.peso_kg > veiculo.capacidade_kg:
-                continue # Pula para o próximo veículo, esse não aguenta
+                continue 
                 
-            # Força temporariamente o ID da transportadora e veículo para usar a função que já existe
             dados_temp = dados.model_copy()
             dados_temp.transportadora_id = transp.id
             dados_temp.veiculo_id = veiculo.id
             
             try:
-                # Usa a mesma matemática super afiada que já criamos
                 calculo = calcular_frete_completo(dados_temp, db)
                 
                 opcoes_geradas.append({
@@ -158,10 +163,16 @@ def calcular_cotacao_spot(dados: SimulacaoCreate, db: Session):
                     "probabilidade_fechamento": calculo["probabilidade_fechamento"]
                 })
             except Exception as e:
-                print(f"Erro ao calcular para {transp.nome} - {veiculo.nome}: {e}")
+                # DETETIVE AQUI: Se der erro, ele vai gritar no terminal!
+                import traceback
+                print(f"❌ ERRO GRAVE no veículo {veiculo.nome}: {e}")
+                traceback.print_exc()
                 continue
                 
-    # Ordenar as opções do preço mais barato para o mais caro (usando o preço IA como base)
+    if not opcoes_geradas:
+        print("⚠️ NENHUMA OPÇÃO FOI GERADA!")
+        return []
+
+    # Ordenar
     opcoes_geradas = sorted(opcoes_geradas, key=lambda k: k['preco_ia'])
-    
     return opcoes_geradas
