@@ -18,17 +18,18 @@ O sistema cruza dados automáticos de roteirização, tabela oficial do governo 
 
 **O Problema:** Muitas transportadoras calculam fretes de cabeça ou em planilhas defasadas. Isso resulta em orçamentos abaixo da Tabela Mínima da ANTT (gerando multas) ou muito acima do mercado (perdendo o cliente para a concorrência).
 
-**A Solução:** Uma API inteligente que avalia a carga, traça a rota, calcula custos de diesel/manutenção e passa os dados por um modelo de regressão treinado para entender o comportamento do mercado, sugerindo o preço "na mosca".
+**A Solução:** Uma API inteligente que avalia a carga, traça a rota, calcula custos preditivos (diesel, manutenção, pedágio e seguro) e passa os dados por um modelo de regressão treinado para entender o comportamento do mercado, sugerindo o preço "na mosca".
 
 ---
 
 ## ✨ Principais Funcionalidades
 
-- **Roteirização Automática:** Integração com OSRM/Nominatim para calcular distâncias exatas (km) entre cidades e estados.
-- **Compliance ANTT:** Cálculo automático do Piso Mínimo da ANTT com base em eixos do veículo e quilometragem.
-- **Cálculo FTL e LTL:** Suporte para carga Lotação (caminhão fechado) e Fracionada (rateio de custos por peso cúbico e taxas operacionais).
-- **Machine Learning Integrado:** Modelo preditivo (Scikit-Learn/Random Forest) que avalia o custo técnico e sugere uma margem de lucro baseada na probabilidade de fechamento.
-- **Dashboard Web:** Interface responsiva, limpa e moderna construída com Tailwind CSS.
+- **Cotação Spot (Multi-Transportadora):** Motor de leilão reverso que simula todas as transportadoras da base de uma só vez e exibe um ranking automático com a opção de maior lucro/menor custo.
+- **Roteirização e Custos Preditivos:** Integração para cálculo de distância e estimativa inteligente de Pedágios (por eixo/UF), Variação de Diesel regional e Seguro *Ad Valorem* da carga.
+- **Compliance ANTT:** Cálculo obrigatório do Piso Mínimo da ANTT atualizado, garantindo proteção contra multas fiscais.
+- **Machine Learning e Risco:** Modelo preditivo que avalia o risco da rota (ex: RJ vs SP) e o custo técnico para sugerir a melhor margem de venda e a % de probabilidade de fechamento.
+- **CRM e Dashboard Financeiro:** Painel completo com histórico de cotações, geração de PDF para o cliente, cadastro de regras de descontos (Clientes VIP) e acompanhamento de faturamento/lucro estimado.
+- **Proteção de Acesso:** Sistema de segurança HTTP Basic Auth embutido para proteger a plataforma contra acessos não autorizados.
 
 ---
 
@@ -37,6 +38,7 @@ O sistema cruza dados automáticos de roteirização, tabela oficial do governo 
 - **Backend:** Python + FastAPI
 - **Banco de Dados:** PostgreSQL (Hospedado no Neon.tech) + SQLAlchemy (ORM)
 - **Inteligência Artificial:** Pandas, NumPy e Scikit-Learn
+- **Geração de Relatórios:** ReportLab (Exportação em PDF)
 - **Integrações (APIs):** OpenRouteService (Distâncias)
 - **Frontend:** HTML5, JavaScript Vanilla (Fetch API) e Tailwind CSS
 - **Deploy:** Render (CI/CD Automático)
@@ -48,3 +50,29 @@ O sistema cruza dados automáticos de roteirização, tabela oficial do governo 
 1. Clone o repositório:
 ```bash
 git clone https://github.com/vsfrancisco/frete-ia.git
+cd frete-ia
+```
+
+2. Crie e ative um ambiente virtual:
+```bash
+python -m venv .venv
+# No Windows:
+.venv\Scripts\activate
+# No Linux/Mac:
+source .venv/bin/activate
+```
+
+3. Instale as dependências:
+```bash
+pip install -r requirements.txt
+```
+
+4. Configure o Banco de Dados:
+- Crie um arquivo `.env` na raiz do projeto contendo a sua URI do PostgreSQL (Neon.tech).
+- Exemplo: `DATABASE_URL=postgresql://usuario:senha@host/banco`
+
+5. Inicie o servidor:
+```bash
+uvicorn app.main:app --reload
+```
+Acesse `http://localhost:8000` no seu navegador usando as credenciais master cadastradas no código.
